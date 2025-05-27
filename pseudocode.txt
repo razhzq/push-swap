@@ -1,0 +1,115 @@
+Push Swap Algorithm Pseudocode
+============================
+
+Main Algorithm (pushswap):
+------------------------
+1. Initialize stack B (empty)
+2. If stack size <= 3:
+   - Use specialized tiny stack sort
+3. Else if stack size <= 15:
+   - Use optimized small stack sort
+4. Else:
+   - Use binary radix sort algorithm
+5. Print total operations performed
+
+Optimized Binary Radix Sort Algorithm (NEW):
+-----------------------------------------
+1. Create sorted copy of stack A for reference
+2. Map each value to its position in the sorted array
+3. Determine max_bits needed (ceiling of log2 of array size)
+4. Push all elements from A to B
+5. For each bit position (0 to max_bits-1):
+   a. For each element in the stacks:
+      - If current bit of the element is 0:
+        * Push from B to A
+      - Else (bit is 1):
+        * Rotate B to process next element
+   b. After processing all elements, push any remaining elements from B to A
+6. Result: Stack A is now fully sorted in ascending order
+
+Small Stack Sort Algorithm (size 4-15):
+-------------------------------------------
+1. Push all but 3 elements to stack B (find largest and push it each time)
+2. Sort remaining 3 elements in stack A using specialized 3-element sort
+3. Push all elements from B back to A in order
+
+Tiny Stack Special Cases (size ≤ 3):
+------------------------
+For size 2:
+- If not in order, swap
+
+For size 3:
+- Use specific patterns of swaps and rotations based on the arrangement:
+  * Case 2 1 3: swap_a
+  * Case 3 2 1: swap_a + rotate_reverse_a
+  * Case 3 1 2: rotate_a
+  * Case 1 3 2: swap_a + rotate_a
+  * Case 2 3 1: rotate_reverse_a
+  * Case 1 2 3: already sorted (do nothing)
+
+Previous Algorithms (for reference):
+-----------------------------------
+
+Chunk Sort Algorithm (old):
+-----------------------------------------
+1. Create sorted copy of stack A
+2. Calculate chunk size = total_size / chunk_count
+3. For each chunk:
+   a. Calculate chunk_min and chunk_max values
+   b. While not all numbers in chunk are pushed:
+      - If current top of A is within chunk range:
+        * Push to B
+        * Increment pushed counter
+      - Otherwise:
+        * Rotate A
+      - Break if we've done too many iterations
+4. While B is not empty:
+   a. Find best element in B to push (currently max value)
+   b. Rotate B to bring best element to top
+   c. Push to A
+
+Small Stack Sort Algorithm (push_swap_sort_a):
+-------------------------------------------
+1. If size <= 3:
+   - Use special case sorting for small stacks
+   - Return
+2. Find median of current stack
+3. While processing all elements:
+   a. If current top < median:
+      - Push to other stack
+      - Increment pushed counter
+   b. Otherwise:
+      - Rotate current stack
+      - Increment rotated counter
+4. Rotate back all rotated elements
+5. Recursively sort:
+   - Remaining elements in current stack
+   - Pushed elements in other stack
+
+Helper Functions:
+---------------
+find_index:
+- Linear search for value in array
+- Return index or -1 if not found
+
+find_best_b_to_a:
+- Find maximum value in stack B
+- Return its index
+
+get_median:
+- Create sorted copy of array
+- Return middle value
+
+Stack Operations:
+---------------
+push_a: Move top of B to top of A
+push_b: Move top of A to top of B
+rotate_a: Move top of A to bottom
+rotate_b: Move top of B to bottom
+rotate_reverse_a: Move bottom of A to top
+rotate_reverse_b: Move bottom of B to top
+swap_a: Swap top two elements of A
+swap_b: Swap top two elements of B
+rotate_multi_stack (rr): Rotate both stacks at once (counts as one operation)
+rotate_reverse_multi_stack (rrr): Reverse rotate both stacks at once (counts as one operation)
+swap_multi_stack (ss): Swap top elements of both stacks at once (counts as one operation) 
