@@ -16,7 +16,7 @@ all: $(NAME)
 
 $(NAME): $(OBJS)
 	$(MAKE) -C $(LIBFT_DIR)
-	$(CC) $(CFLAGS) $(OBJS) -L$(LIBFT_DIR) -lft -o $(NAME)
+	$(CC) $(CFLAGS) $(OBJS) -L$(LIBFT_DIR) -lft -lm -o $(NAME)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -I$(LIBFT_DIR) -I$(STACKOPS_DIR) -c $< -o $@

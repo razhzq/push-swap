@@ -4,6 +4,7 @@
 
 #include "stackops/stackops.h"
 #include <stdio.h>
+#include <math.h>
 
 int get_median(int *arr, int len);
 int parse_args(int argc, char **argv, int **a);
