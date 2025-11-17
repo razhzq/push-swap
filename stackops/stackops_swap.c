@@ -1,3 +1,16 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   stackops_swap.c                                    :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: muabdul- <muabdul-@student.42kl.edu.my>    +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/11/17 21:12:43 by muabdul-          #+#    #+#             */
+/*   Updated: 2025/11/17 21:12:46 by muabdul-         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
+
 #include "stackops.h"
 
 
@@ -9,7 +22,6 @@ void swap_a(int *a, int len)
 	int temp = a[0];
 	a[0] = a[1];
 	a[1] = temp;
-	op_count++;
 }
 
 void swap_b(int *b, int len)
@@ -20,7 +32,6 @@ void swap_b(int *b, int len)
 	int temp = b[0];
 	b[0] = b[1];
 	b[1] = temp;
-	op_count++;
 }
 
 void swap_multi_stack(int **a, int **b, int len_a, int len_b)
@@ -36,7 +47,5 @@ void swap_multi_stack(int **a, int **b, int len_a, int len_b)
 	int temp_b = (*b)[0];
 	(*b)[0] = (*b)[1];
 	(*b)[1] = temp_b;
-	
-	op_count++;
 }
 

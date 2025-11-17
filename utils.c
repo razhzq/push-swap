@@ -1,147 +1,159 @@
 #include "pushswap.h"
+#include <stdlib.h> 
+#include <stdio.h>
+#include <limits.h>
 
+// Helper to get a sorted copy of the stack for rank/median calculation
+int	*get_sorted_copy(int *arr, int len)
+{
+	int *sorted;
+	int i;
+	int j;
+	int temp;
+
+	sorted = malloc(sizeof(int) * len);
+	if (!sorted)
+		return (NULL);
+	
+	i = 0;
+	while (i < len)
+	{
+		sorted[i] = arr[i];
+		i++;
+	}
+	
+	// Sort array using bubble sort (or any stable sort)
+	i = 0;
+	while (i < len - 1)
+	{
+		j = 0;
+		while (j < len - i - 1)
+		{
+			if (sorted[j] > sorted[j + 1])
+			{
+				temp = sorted[j];
+				sorted[j] = sorted[j + 1];
+				sorted[j + 1] = temp;
+			}
+			j++;
+		}
+		i++;
+	}
+	return (sorted);
+}
+
+// Get the median value from the array
 int get_median(int *arr, int len)
 {
     int *sorted;
-    int i;
-    int j;
-    int temp;
     int median;
 
-    sorted = malloc(sizeof(int) * len);
+    sorted = get_sorted_copy(arr, len);
     if (!sorted)
-        return 0;
+        return (0);
     
-    // Copy array to avoid modifying original
-    i = 0;
-    while (i < len)
-    {
-        sorted[i] = arr[i];
-        i++;
-    }
-    
-    // Sort array using bubble sort
-    i = 0;
-    while (i < len - 1)
-    {
-        j = 0;
-        while (j < len - i - 1)
-        {
-            if (sorted[j] > sorted[j + 1])
-            {
-                temp = sorted[j];
-                sorted[j] = sorted[j + 1];
-                sorted[j + 1] = temp;
-            }
-            j++;
-        }
-        i++;
-    }
-    
-    // Get median
     median = sorted[(len - 1) / 2];
     free(sorted);
-    return median;
+    return (median);
 }
 
+// Counts numbers in a single string (handles "1 2 3" or just "1")
+static int count_numbers_in_string(char *str)
+{
+    int count = 0;
+    char *ptr = str;
+    while (*ptr)
+    {
+        while (*ptr == ' ') // skip spaces
+            ptr++;
+        if (*ptr)
+        {
+            count++;
+            while (*ptr && *ptr != ' ')
+                ptr++;
+        }
+    }
+    return count;
+}
+
+// Parses arguments, checks for errors (non-integer, limits, duplicates), and returns length
 int parse_args(int argc, char **argv, int **a)
 {
-    int i;
-    if (argc < 2)
-    {
-        *a = NULL;
-        return 0;
-    }
-    *a = malloc(sizeof(int) * (argc - 1));
+    int total = 0;
+    int num_count = 0;
+
+    // Pass 1: count total numbers
+    for (int i = 1; i < argc; i++)
+        num_count += count_numbers_in_string(argv[i]);
+
+    *a = malloc(sizeof(int) * num_count);
     if (!*a)
-        return 0;
-    i = 1;
-    while (i < argc)
+        return (0);
+
+    // Pass 2: parse numbers and check limits/invalid chars
+    for (int i = 1; i < argc; i++)
     {
-        (*a)[i - 1] = ft_atoi(argv[i]);
-        i++;
-    }
-    // Debug print
-    printf("parse_args: parsed %d numbers: ", argc - 1);
-    for (int j = 0; j < argc - 1; j++)
-        printf("%d ", (*a)[j]);
-    printf("\n");
-    return argc - 1;
-}
+        char *ptr = argv[i];
+        while (*ptr)
+        {
+            while (*ptr == ' ')
+                ptr++;
+            if (*ptr == '\0')
+                break;
 
-void sort_small_stack_a(int *a, int len)
-{
-    if (len == 2) {
-        if (a[0] > a[1]) {
-            swap_a(a, len);
-        }
-    }
-    else if (len == 3) {
-        if (a[0] > a[1] && a[1] < a[2] && a[0] < a[2]) {
-            swap_a(a, len);
-        }
-        else if (a[0] > a[1] && a[1] > a[2]) {
-            swap_a(a, len);
-            rotate_reverse_a(a, len);
-        }
-        else if (a[0] > a[1] && a[1] < a[2] && a[0] > a[2]) {
-            rotate_a(a, len);
-        }
-        else if (a[0] < a[1] && a[1] > a[2] && a[0] < a[2]) {
-            swap_a(a, len);
-            rotate_a(a, len);
-        }
-        else if (a[0] < a[1] && a[1] > a[2] && a[0] > a[2]) {
-            rotate_reverse_a(a, len);
-        }
-    }
-}
+            char *endptr;
+            // Use long to check for overflow outside INT_MIN/INT_MAX
+            long val = strtol(ptr, &endptr, 10); 
 
-void sort_small_stack_b(int *b, int len)
-{
-    if (len == 2) {
-        if (b[0] < b[1]) {
-            swap_b(b, len);
-        }
-    }
-    else if (len == 3) {
-        if (b[0] < b[1] && b[1] > b[2] && b[0] > b[2]) {
-            swap_b(b, len);
-        }
-        else if (b[0] < b[1] && b[1] < b[2]) {
-            swap_b(b, len);
-            rotate_reverse_b(b, len);
-        }
-        else if (b[0] < b[1] && b[1] > b[2] && b[0] < b[2]) {
-            rotate_b(b, len);
-        }
-        else if (b[0] > b[1] && b[1] < b[2] && b[0] < b[2]) {
-            swap_b(b, len);
-            rotate_b(b, len);
-        }
-        else if (b[0] > b[1] && b[1] < b[2] && b[0] > b[2]) {
-            rotate_reverse_b(b, len);
-        }
-    }
-}
+            // Check 1: If strtol read anything AND if the string isn't just a number followed by trash
+            if (endptr == ptr || (*endptr != '\0' && *endptr != ' ')) 
+            {
+                free(*a);
+                *a = NULL;
+                return (-1); // Invalid char/format
+            }
 
-// Returns a sorted copy of the array (ascending order)
-int *get_sorted_copy(int *arr, int len)
-{
-    int *sorted = malloc(sizeof(int) * len);
-    if (!sorted)
-        return NULL;
-    for (int i = 0; i < len; i++)
-        sorted[i] = arr[i];
-    // Bubble sort (can be replaced with better sort if needed)
-    for (int i = 0; i < len - 1; i++) {
-        for (int j = 0; j < len - i - 1; j++) {
-            if (sorted[j] > sorted[j + 1]) {
-                int temp = sorted[j];
-                sorted[j] = sorted[j + 1];
-                sorted[j + 1] = temp;
+            // Check 2: INT range check
+            if (val < INT_MIN || val > INT_MAX) 
+            {
+                free(*a);
+                *a = NULL;
+                return (-2); // Integer limits exceeded
+            }
+
+            (*a)[total++] = (int)val;
+            ptr = endptr;
+        }
+    }
+
+    // Check 3: Duplicates
+    for (int i = 0; i < total; i++)
+    {
+        for (int j = i + 1; j < total; j++)
+        {
+            if ((*a)[i] == (*a)[j])
+            {
+                free(*a);
+                *a = NULL;
+                return (-3); // Duplicates found
             }
         }
     }
-    return sorted;
+
+    return (total);
 }
+
+// The instruction functions (must write to STDOUT)
+// NOTE: You must define these yourself if they are not in a separate instruction.c file.
+// Example:
+/*
+void	swap_a(int *a, int len)
+{
+    if (len < 2) return;
+    int temp = a[0];
+    a[0] = a[1];
+    a[1] = temp;
+    write(1, "sa\n", 3);
+}
+// ... and so on for all 11 required instructions.
+*/
