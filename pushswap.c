@@ -1,11 +1,39 @@
 #include "pushswap.h"
 #include <limits.h>
-#include <stdio.h> 
+#include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 
+static void	do_sort_3(int *a)
+{
+	int	v0;
+	int	v1;
+	int	v2;
 
-static void	sort_3_elements(int *a, int len)
+	v0 = a[0];
+	v1 = a[1];
+	v2 = a[2];
+	if (v0 > v1 && v1 < v2 && v0 < v2)
+		swap_a(a, 3);
+	else if (v0 > v1 && v1 > v2)
+	{
+		swap_a(a, 3);
+		rotate_reverse_a(a, 3);
+	}
+	else if (v0 > v1 && v1 < v2 && v0 > v2)
+		rotate_a(a, 3);
+	else if (v0 < v1 && v1 > v2 && v0 < v2)
+	{
+		swap_a(a, 3);
+		rotate_a(a, 3);
+	}
+	else if (v0 < v1 && v1 > v2 && v0 > v2)
+		rotate_reverse_a(a, 3);
+}
+
+
+void	sort_3_elements(int *a, int len)
 {
 	if (len < 2)
 		return ;
@@ -16,246 +44,64 @@ static void	sort_3_elements(int *a, int len)
 	}
 	else if (len == 3)
 	{
-		int v0 = a[0];
-		int v1 = a[1];
-		int v2 = a[2];
-
-		if (v0 > v1 && v1 < v2 && v0 < v2) 
-			swap_a(a, 3);
-		else if (v0 > v1 && v1 > v2) 
-		{
-			swap_a(a, 3);
-			rotate_reverse_a(a, 3);
-		}
-		else if (v0 > v1 && v1 < v2 && v0 > v2) 
-			rotate_a(a, 3);
-		else if (v0 < v1 && v1 > v2 && v0 < v2)
-		{
-			swap_a(a, 3);
-			rotate_a(a, 3);
-		}
-		else if (v0 < v1 && v1 > v2 && v0 > v2)
-			rotate_reverse_a(a, 3);
+		do_sort_3(a);
 	}
 }
 
-void	pushswap_chunk_sort(int *a, int *b, int *len_a, int *len_b,
+// The core sorting flow, previously inside pushswap_chunk_sort (Max 25 lines,
+	4 args)
+void	pushswap_core_sort(t_stacks *stacks, int total, int *sorted,
 		int chunk_count)
 {
-	int	total;
-	int	*sorted;
-	int	min_idx;
-	int	min_val;
 	int	chunk_size;
-	int	chunk_min;
-	int	chunk_max;
-	int	rank;
-	int	max_idx;
-	int	max_val;
-	int	insert_pos;
-	int	b_rotate_forward;
-	int	b_cost;
-	int	a_rotate_forward;
-	int	a_cost;
-	int	simultaneous;
 
-	total = *len_a;
-	if (total <= 3)
+	if (total <= 15)
 	{
-		sort_3_elements(a, total);
+		small_sort_push(stacks);
 		return ;
 	}
-	
+	chunk_size = total / chunk_count;
+	// Phase 1: Push chunks to B
+	phase1_push_loop(stacks, sorted, total, chunk_size);
+	// Sort remaining 3 in A
+	sort_3_elements(*stacks->a, *stacks->len_a);
+	// Phase 2: Push back to A
+	phase2_main_loop(stacks);
+	// Final rotation
+	final_rotation(*stacks->a, *stacks->len_a);
+}
+
+// New signature for pushswap_chunk_sort (Max 25 lines, 4 args)
+void	pushswap_chunk_sort(int *a, int *b, int *len_a, int *len_b)
+{
+	int			total;
+	int			*sorted;
+	t_stacks	stacks;
+	int			chunk_count;
+
+	total = *len_a + *len_b;
+	stacks = (t_stacks){&a, &b, len_a, len_b};
 	sorted = get_sorted_copy(a, total);
 	if (!sorted)
 		return ;
-
-	// For small arrays (4-15), use optimized small sort (push all but 3 largest to B)
+	// Determine chunk count (must be copied here from pushswap to reduce its line count)
 	if (total <= 15)
-	{
-		while (*len_a > 3)
-		{
-			min_idx = 0;
-			min_val = a[0];
-			for (int i = 1; i < *len_a; i++)
-			{
-				if (a[i] < min_val)
-				{
-					min_val = a[i];
-					min_idx = i;
-				}
-			}
-			if (min_idx <= *len_a / 2)
-			{
-				for (int i = 0; i < min_idx; i++)
-					rotate_a(a, *len_a);
-			}
-			else
-			{
-				for (int i = 0; i < *len_a - min_idx; i++)
-					rotate_reverse_a(a, *len_a);
-			}
-			push_b(&a, &b, len_a, len_b);
-		}
-		sort_3_elements(a, *len_a);
-		while (*len_b > 0)
-			push_a(&a, &b, len_a, len_b);
-		free(sorted);
-		return ;
-	}
-
-	chunk_size = total / chunk_count;
-	for (int chunk = 0; chunk < chunk_count; chunk++)
-	{
-		chunk_min = chunk * chunk_size;
-		chunk_max = (chunk == chunk_count - 1) ? total - 3 : (chunk + 1) * chunk_size;
-
-		int to_scan = *len_a;
-		while (to_scan > 0 && *len_a > 3)
-		{
-			rank = -1;
-			for (int j = 0; j < total; j++)
-			{
-				if (a[0] == sorted[j])
-				{
-					rank = j;
-					break ;
-				}
-			}
-			// If in current chunk range, push to B
-			if (rank >= chunk_min && rank < chunk_max)
-			{
-				push_b(&a, &b, len_a, len_b);
-				// Rotate B strategically
-				if (*len_b >= 2 && rank < chunk_min + chunk_size / 2
-					&& b[1] > b[0])
-				{
-					rotate_b(b, *len_b);
-				}
-			}
-			else
-			{
-				rotate_a(a, *len_a);
-			}
-			to_scan--;
-		}
-	}
-	
-	sort_3_elements(a, *len_a);
-	
-	// Phase 2: Push everything back from B to A with optimized rotations
-	while (*len_b > 0)
-	{
-		// Find max in B
-		max_idx = 0;
-		max_val = b[0];
-		for (int i = 1; i < *len_b; i++)
-		{
-			if (b[i] > max_val)
-			{
-				max_val = b[i];
-				max_idx = i;
-			}
-		}
-		
-		// Find insertion point in A
-		insert_pos = 0;
-		for (int i = 0; i < *len_a; i++)
-		{
-			if (max_val > a[i])
-				insert_pos = i + 1;
-		}
-		
-		// Handle wrap-around (find smallest element in A if max_val is the largest overall)
-		if (insert_pos == *len_a)
-		{
-			min_idx = 0;
-			for (int i = 1; i < *len_a; i++)
-			{
-				if (a[i] < a[min_idx])
-					min_idx = i;
-			}
-			insert_pos = min_idx;
-		}
-		
-		// Calculate rotation costs
-		b_rotate_forward = (max_idx <= *len_b / 2);
-		b_cost = b_rotate_forward ? max_idx : (*len_b - max_idx);
-		a_rotate_forward = (insert_pos <= *len_a / 2);
-		a_cost = a_rotate_forward ? insert_pos : (*len_a - insert_pos);
-		
-		// Perform rotations (prioritizing simultaneous rr/rrr)
-		if (b_rotate_forward && a_rotate_forward)
-		{
-			simultaneous = (b_cost < a_cost) ? b_cost : a_cost;
-			for (int i = 0; i < simultaneous; i++)
-				rotate_multi_stack(&a, &b, len_a, len_b);
-			for (int i = 0; i < b_cost - simultaneous; i++)
-				rotate_b(b, *len_b);
-			for (int i = 0; i < a_cost - simultaneous; i++)
-				rotate_a(a, *len_a);
-		}
-		else if (!b_rotate_forward && !a_rotate_forward)
-		{
-			simultaneous = (b_cost < a_cost) ? b_cost : a_cost;
-			for (int i = 0; i < simultaneous; i++)
-				rotate_reverse_multi_stack(&a, &b, len_a, len_b);
-			for (int i = 0; i < b_cost - simultaneous; i++)
-				rotate_reverse_b(b, *len_b);
-			for (int i = 0; i < a_cost - simultaneous; i++)
-				rotate_reverse_a(a, *len_a);
-		}
-		else
-		{
-			if (b_rotate_forward)
-			{
-				for (int i = 0; i < b_cost; i++)
-					rotate_b(b, *len_b);
-			}
-			else
-			{
-				for (int i = 0; i < b_cost; i++)
-					rotate_reverse_b(b, *len_b);
-			}
-			if (a_rotate_forward)
-			{
-				for (int i = 0; i < a_cost; i++)
-					rotate_a(a, *len_a);
-			}
-			else
-			{
-				for (int i = 0; i < a_cost; i++)
-					rotate_reverse_a(a, *len_a);
-			}
-		}
-		push_a(&a, &b, len_a, len_b);
-	}
-	
-	// Final rotation to put min element at top of A
-	min_idx = 0;
-	for (int i = 1; i < *len_a; i++)
-	{
-		if (a[i] < a[min_idx])
-			min_idx = i;
-	}
-	if (min_idx <= *len_a / 2)
-	{
-		for (int i = 0; i < min_idx; i++)
-			rotate_a(a, *len_a);
-	}
+		chunk_count = 1;
+	else if (total <= 100)
+		chunk_count = 5;
+	else if (total <= 500)
+		chunk_count = 10;
 	else
-	{
-		for (int i = 0; i < *len_a - min_idx; i++)
-			rotate_reverse_a(a, *len_a);
-	}
+		chunk_count = 20;
+	pushswap_core_sort(&stacks, total, sorted, chunk_count);
 	free(sorted);
 }
 
+// Main function (Max 25 lines, 2 args)
 void	pushswap(int *a, int len_a)
 {
 	int	*b;
 	int	len_b;
-	int	chunk_count;
 
 	if (!a || len_a <= 0)
 		return ;
@@ -266,23 +112,12 @@ void	pushswap(int *a, int len_a)
 		free(a);
 		return ;
 	}
-
-	// Determine chunk count based on size for optimization
-	if (len_a <= 15)
-		chunk_count = 1; 
-	else if (len_a <= 100)
-		chunk_count = 5;
-	else if (len_a <= 500)
-		chunk_count = 10;
-	else
-		chunk_count = 20;
-	
-	pushswap_chunk_sort(a, b, &len_a, &len_b, chunk_count);
-	
+	pushswap_chunk_sort(a, b, &len_a, &len_b);
 	free(a);
 	free(b);
 }
 
+// Main entry point (Max 25 lines, 2 args)
 int	main(int argc, char **argv)
 {
 	int *a;
@@ -290,19 +125,17 @@ int	main(int argc, char **argv)
 
 	if (argc < 2)
 	{
-		// No output for no arguments, as required by the subject
-		return (0); 
+		return (0);
 	}
 
 	len_a = parse_args(argc, argv, &a);
-	
-	// Error handling: output "Error" to stderr if parsing failed
+
 	if (len_a <= 0 || !a)
 	{
-		fprintf(stderr, "Error\n"); 
+		fprintf(stderr, "Error\n");
 		return (1);
 	}
-	
+
 	pushswap(a, len_a);
 	return (0);
 }

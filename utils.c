@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <limits.h>
 
-// Helper to get a sorted copy of the stack for rank/median calculation
+// Max 25 lines, Max 4 args. OK.
 int	*get_sorted_copy(int *arr, int len)
 {
 	int *sorted;
@@ -16,18 +16,17 @@ int	*get_sorted_copy(int *arr, int len)
 		return (NULL);
 	
 	i = 0;
-	while (i < len)
+	while (i < len) // Converted for to while
 	{
 		sorted[i] = arr[i];
 		i++;
 	}
 	
-	// Sort array using bubble sort (or any stable sort)
 	i = 0;
-	while (i < len - 1)
+	while (i < len - 1) // Converted for to while
 	{
 		j = 0;
-		while (j < len - i - 1)
+		while (j < len - i - 1) // Converted for to while
 		{
 			if (sorted[j] > sorted[j + 1])
 			{
@@ -42,7 +41,7 @@ int	*get_sorted_copy(int *arr, int len)
 	return (sorted);
 }
 
-// Get the median value from the array
+// Max 25 lines, Max 4 args. OK.
 int get_median(int *arr, int len)
 {
     int *sorted;
@@ -57,7 +56,7 @@ int get_median(int *arr, int len)
     return (median);
 }
 
-// Counts numbers in a single string (handles "1 2 3" or just "1")
+// Max 25 lines, Max 4 args. OK.
 static int count_numbers_in_string(char *str)
 {
     int count = 0;
@@ -76,84 +75,105 @@ static int count_numbers_in_string(char *str)
     return count;
 }
 
-// Parses arguments, checks for errors (non-integer, limits, duplicates), and returns length
+// NEW HELPER: Pass 1 - Count total numbers (Max 25 lines, 2 args)
+static int count_total_numbers(int argc, char **argv)
+{
+	int num_count;
+	int i;
+
+	num_count = 0;
+	i = 1;
+	while (i < argc) // Converted for to while
+	{
+		num_count += count_numbers_in_string(argv[i]);
+		i++;
+	}
+	return (num_count);
+}
+
+// NEW HELPER: Pass 2 - Parse and validate (Max 25 lines, 3 args)
+static int parse_validate_and_fill(int argc, char **argv, int *a)
+{
+	int		total;
+	int		i;
+	char	*ptr;
+	char	*endptr;
+	long	val;
+
+	total = 0;
+	i = 1;
+	while (i < argc) // Converted for to while
+	{
+		ptr = argv[i];
+		while (*ptr)
+		{
+			while (*ptr == ' ')
+				ptr++;
+			if (*ptr == '\0')
+				break ;
+			val = strtol(ptr, &endptr, 10);
+			if (endptr == ptr || (*endptr != '\0' && *endptr != ' '))
+				return (-1); // Invalid char/format
+			if (val < INT_MIN || val > INT_MAX)
+				return (-2); // Integer limits exceeded
+			a[total++] = (int)val;
+			ptr = endptr;
+		}
+		i++;
+	}
+	return (total);
+}
+
+// NEW HELPER: Pass 3 - Check duplicates (Max 25 lines, 2 args)
+static int check_for_duplicates(int *a, int total)
+{
+	int i;
+	int j;
+
+	i = 0;
+	while (i < total) // Converted for to while
+	{
+		j = i + 1;
+		while (j < total) // Converted for to while
+		{
+			if (a[i] == a[j])
+				return (-3); // Duplicates found
+			j++;
+		}
+		i++;
+	}
+	return (0);
+}
+
+// Refactored Wrapper (Max 25 lines, 3 args)
 int parse_args(int argc, char **argv, int **a)
 {
-    int total = 0;
-    int num_count = 0;
+	int num_count;
+	int total;
+	int check;
 
-    // Pass 1: count total numbers
-    for (int i = 1; i < argc; i++)
-        num_count += count_numbers_in_string(argv[i]);
+	num_count = count_total_numbers(argc, argv);
+	if (num_count == 0)
+		return (0);
 
-    *a = malloc(sizeof(int) * num_count);
-    if (!*a)
-        return (0);
+	*a = malloc(sizeof(int) * num_count);
+	if (!*a)
+		return (0);
 
-    // Pass 2: parse numbers and check limits/invalid chars
-    for (int i = 1; i < argc; i++)
-    {
-        char *ptr = argv[i];
-        while (*ptr)
-        {
-            while (*ptr == ' ')
-                ptr++;
-            if (*ptr == '\0')
-                break;
-
-            char *endptr;
-            // Use long to check for overflow outside INT_MIN/INT_MAX
-            long val = strtol(ptr, &endptr, 10); 
-
-            // Check 1: If strtol read anything AND if the string isn't just a number followed by trash
-            if (endptr == ptr || (*endptr != '\0' && *endptr != ' ')) 
-            {
-                free(*a);
-                *a = NULL;
-                return (-1); // Invalid char/format
-            }
-
-            // Check 2: INT range check
-            if (val < INT_MIN || val > INT_MAX) 
-            {
-                free(*a);
-                *a = NULL;
-                return (-2); // Integer limits exceeded
-            }
-
-            (*a)[total++] = (int)val;
-            ptr = endptr;
-        }
-    }
-
-    // Check 3: Duplicates
-    for (int i = 0; i < total; i++)
-    {
-        for (int j = i + 1; j < total; j++)
-        {
-            if ((*a)[i] == (*a)[j])
-            {
-                free(*a);
-                *a = NULL;
-                return (-3); // Duplicates found
-            }
-        }
-    }
-
-    return (total);
+	total = parse_validate_and_fill(argc, argv, *a);
+	if (total < 0)
+	{
+		free(*a);
+		*a = NULL;
+		return (total);
+	}
+	
+	check = check_for_duplicates(*a, total);
+	if (check < 0)
+	{
+		free(*a);
+		*a = NULL;
+		return (check);
+	}
+	return (total);
 }
-
-// The instruction functions (must write to STDOUT)
-// NOTE: You must define these yourself if they are not in a separate instruction.c file.
-// Example:
-/*
-void	swap_a(int *a, int len)
-{
-    if (len < 2) return;
-    int temp = a[0];
-    a[0] = a[1];
-    a[1] = temp;
-    write(1, "sa\n", 3);
-}
-// ... and so on for all 11 required instructions.
-*/
