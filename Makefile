@@ -6,6 +6,7 @@ STACKOPS_DIR = stackops
 
 SRCS = pushswap.c \
        utils.c \
+	   pushswap_sort_helper.c \
        $(STACKOPS_DIR)/stackops_push.c \
        $(STACKOPS_DIR)/stackops_swap.c \
        $(STACKOPS_DIR)/stackops_rotate.c
